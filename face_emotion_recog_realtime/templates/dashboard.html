@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Face Emotion Recognition</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #0f172a;
+        color: white;
+        text-align: center;
+      }
+      video,
+      canvas {
+        border-radius: 10px;
+        margin-top: 10px;
+      }
+      .emotion {
+        font-size: 28px;
+        margin-top: 15px;
+        font-weight: bold;
+      }
+      .confidence {
+        font-size: 18px;
+        color: #38bdf8;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🎭 Face Emotion Recognition</h1>
+
+    <video id="video" width="320" height="240" autoplay></video>
+    <canvas id="canvas" width="320" height="240" style="display: none"></canvas>
+
+    <div class="emotion" id="emotion">Detecting...</div>
+    <div class="confidence" id="confidence"></div>
+
+    <script>
+      const video = document.getElementById("video");
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
+
+      // Access webcam
+      navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+        video.srcObject = stream;
+      });
+
+      function sendFrame() {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob((blob) => {
+          const formData = new FormData();
+          formData.append("image", blob, "frame.jpg");
+
+          fetch("/predict", {
+            method: "POST",
+            body: formData,
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.emotion) {
+                document.getElementById("emotion").innerText =
+                  "Emotion: " + data.emotion;
+                document.getElementById("confidence").innerText =
+                  "Confidence: " + (data.confidence * 100).toFixed(1) + "%";
+              } else {
+                document.getElementById("emotion").innerText =
+                  data.error || "No face detected";
+                document.getElementById("confidence").innerText = "";
+              }
+            });
+        }, "image/jpeg");
+      }
+
+      // Send frame every 800ms
+      setInterval(sendFrame, 1);
+    </script>
+  </body>
+</html>
